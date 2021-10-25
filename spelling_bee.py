@@ -13,8 +13,8 @@ class Game:
     min_words, 
     min_letters = 3,
     points_per_letter = 1,
-    extra_for_all_letters = 3,
-    min_words_with_all_letters = 0
+    bonus_points = 3,
+    min_bonus_words = 0
     ):
         self.consonants = consonants
         self.vowels = vowels
@@ -23,15 +23,15 @@ class Game:
         self.min_words = min_words
         self.min_letters = min_letters
         self.points_per_letter = points_per_letter
-        self.extra_for_all_letters = extra_for_all_letters
-        self.min_words_with_all_letters = min_words_with_all_letters
+        self.bonus_points = bonus_points
+        self.min_bonus_words = min_bonus_words
 
         self.super_letter = ''
         self.picked_letters = []
         self.words = []
         self.found_words = []
         self.points = 0
-        self.all_letters_word_count = 0
+        self.bonus_words = 0
 
     def delete_game(self):
         self.super_letter = ''
@@ -39,35 +39,23 @@ class Game:
         self.words = []
         self.found_words = []
         self.points = 0
-        self.all_letters_word_count = 0
+        self.bonus_words = 0
     
-    def pick_letters(self):
-        self.delete_game()
+    def pick_letters(self, letters, amount_of_letters):
         leftovers = []
-        leftovers[:] = self.letters[:]
-        rand = random.randint(0, len(leftovers)-1)
-        self.super_letter = leftovers[rand]
-        leftovers.remove(self.super_letter)
-        for i in range(0,6):
+        leftovers[:] = letters[:]
+        picked_letters = []
+        while(len(picked_letters) < amount_of_letters):
             rand = random.randint(0, len(leftovers)-1)
-            self.picked_letters.append(leftovers[rand])
+            picked_letters.append(leftovers[rand])
             leftovers.remove(leftovers[rand])
-        self.print_letters()
+        return picked_letters
 
-    def gen(self):
-        self.pick_letters()
-        self.generate_wordlist()
-        while ((len(self.words) < self.min_words) or (self.all_letters_word_count < self.min_words_with_all_letters)):
-            print("Regenerating...")
-            self.pick_letters()
-            self.generate_wordlist()
-        print("Found %d words (with %d all-letter words)!" % (len(self.words), self.all_letters_word_count))
-
-    def generate_wordlist(self):
-        self.words = []
+    def generate_wordlist(self, picked_letters, super_letter, file_name, min_letters):
+        words = []
         allowed_letters = []
-        allowed_letters[:] = self.picked_letters[:]
-        allowed_letters += self.super_letter
+        allowed_letters[:] = picked_letters[:]
+        allowed_letters += super_letter
         allowed_letters += string.whitespace
         allowed_letters += chr(10) #LF
 
@@ -84,13 +72,13 @@ class Game:
         try:
             path = os.getcwd()
             path += '\\' 
-            path += self.file_name
+            path += file_name
             list_file = open(path, 'r', encoding="utf-8")
         except FileNotFoundError:
             raise FileNotFoundError
         
         for line in list_file.readlines():
-            if (len(line) < (self.min_letters + 1)): #letters + \n
+            if (len(line.strip()) < (min_letters)):
                 continue
             broken = False
             super = False
@@ -101,45 +89,69 @@ class Game:
                     broken = True
                     break
                 else:
-                    if (char in self.super_letter):
+                    if (char in super_letter):
                         super = True
             if ((not broken) and (super)):
                 word = line.strip()
-                self.words.append(word)
-                if (self.all_letters_check(word)):
-                    self.all_letters_word_count += 1
+                words.append(word)
         list_file.close()
+        return words
     
+    def all_letters_check(self, word, picked_letters, super_letter):
+        for letter in (picked_letters):
+            if (letter != super_letter and letter not in word):
+                return False
+        return True
+
+    def count_bonus_words(self, words, picked_letters, super_letter):
+        counter = 0
+        for word in words:
+            if (self.all_letters_check(word,picked_letters,super_letter)):
+                counter += 1
+        return counter
+
+    def gen(self):
+        self.delete_game()
+        self.picked_letters = self.pick_letters(self.letters,7)
+        self.super_letter = self.pick_letters(self.picked_letters, 1)[0]
+        self.picked_letters.remove(self.super_letter)
+        self.words = self.generate_wordlist(self.picked_letters,self.super_letter,self.file_name,self.min_letters)
+        self.bonus_words = self.count_bonus_words(self.words,self.picked_letters,self.super_letter)
+        self.print_letters()
+        print("Found %d words (with %d all-letter words)!" % (len(self.words), self.bonus_words))
+
+    def find_board(self):    
+        while ((len(self.words) < self.min_words) or (self.bonus_words < self.min_bonus_words)):
+            print("Generating...")
+            self.gen()
+        
     def check_word(self, word):
         if (word in self.words):
             if (word not in self.found_words):
                 self.found_words.append(word)
                 self.points += len(word)
-                if (self.all_letters_check(word)):
-                    self.points += self.extra_for_all_letters
-                    print("%s bonus points!" %self.extra_for_all_letters)
+                if (self.all_letters_check(word,self.picked_letters,self.super_letter)):
+                    self.points += self.bonus_points
+                    print("+%d bonus points!" %self.bonus_points)
                 print("%s is correct! +%d points! Total of %d points!" % (word, len(word), self.points))
             else:
                 print("You have already found %s!" %(word))
         else:
-            if (len(word) < self.min_letters):
-                print ("%s is too short!" % word)
-            if (self.super_letter in word):
-                bad_letters = False
-                for char in ''.join(sorted(set(word), key=word.index)):
-                    if (char != self.super_letter and (char not in self.picked_letters)):
-                        print ("%s contains the letter %s which is not in your picked letters!" %(word, char))
-                        bad_letters = True
-                if (not bad_letters):
-                    print ("Word %s not found!" % word)
-            else: 
-                print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
+                self.why_word_bad(word)
 
-    def all_letters_check(self, word):
-        for letter in (self.picked_letters):
-            if (letter not in word):
-                return False
-        return True
+    def why_word_bad(self, word):
+        if (len(word) < self.min_letters):
+            print ("%s is too short!" % word)
+        if (self.super_letter in word):
+            bad_letters = False
+            for char in ''.join(sorted(set(word), key=word.index)):
+                if (char != self.super_letter and (char not in self.picked_letters)):
+                    print ("%s contains the letter %s which is not in your picked letters!" %(word, char))
+                    bad_letters = True
+            if (not bad_letters):
+                print ("Word %s not found!" % word)
+        else: 
+            print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
 
     def print_letters(self):
         print ("Letters: ", self.picked_letters)
@@ -149,7 +161,7 @@ class Game:
         print ("You must include the super letter in each word.")
         print ("You must use at least %s letters in each word." % self.min_letters)
         print ("Points per letter: %d." % self.points_per_letter)
-        print ("Bonus points for using all letters: %d." % self.extra_for_all_letters)
+        print ("Bonus points for using all letters: %d." % self.bonus_points)
 
     def print_score(self):
         print("You have a total of %d points!" % self.points)
@@ -206,9 +218,13 @@ def main():
     vowels = ['a', 'e', 'i', 'o', 'u', 'y', 'å', 'ä', 'ö']
     word_file = "swe_wordlist"
     min_words = 20
+    min_letters = 3
+    points_per_letter = 1
+    bonus_points = 3
+    min_bonus_words = 0
 
-    game = Game(consonants,vowels,word_file, min_words)
-    game.gen()
+    game = Game(consonants,vowels,word_file, min_words,min_letters,points_per_letter,bonus_points,min_bonus_words)
+    game.find_board()
 
     menu = Menu()
     menu.add_choice('l',"Show Letters", game.print_letters)
