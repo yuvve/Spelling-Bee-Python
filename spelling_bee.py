@@ -1,5 +1,6 @@
 import random
 import string
+import os
 
 class WrongAmountOfArguments(ValueError):
     pass
@@ -81,7 +82,10 @@ class Game:
         }
 
         try:
-            list_file = open(self.file_name, 'r', encoding="utf-8")
+            path = os.getcwd()
+            path += '\\' 
+            path += self.file_name
+            list_file = open(path, 'r', encoding="utf-8")
         except FileNotFoundError:
             raise FileNotFoundError
         
@@ -125,11 +129,18 @@ class Game:
             else:
                 print("You have already found %s!" %(word))
         else:
-            if (self.super_letter not in word):
+            if (len(word) < self.min_letters):
+                print ("%s is too short!" % word)
+            if (self.super_letter in word):
+                bad_letters = False
+                for char in ''.join(sorted(set(word), key=word.index)):
+                    if (char != self.super_letter and (char not in self.picked_letters)):
+                        print ("%s contains the letter %s which is not in your picked letters!" %(word, char))
+                        bad_letters = True
+                if (not bad_letters):
+                    print ("Word %s not found!" % word)
+            else: 
                 print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
-            for char in ''.join(sorted(set(word), key=word.index)):
-                if (char not in (self.picked_letters or self.super_letter)):
-                    print ("%s contains the letter %s which is not in your picked letters!" %(word, char))
 
     def print_letters(self):
         print ("Letters: ", self.picked_letters)
@@ -208,7 +219,5 @@ def main():
     menu.add_choice('s',"Show Score", game.print_score)
     menu.add_choice('r',"Show Rules", game.print_rules)
     menu.run()
-
-
 
 main()
