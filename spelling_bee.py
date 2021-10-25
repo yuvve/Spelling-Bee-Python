@@ -13,7 +13,8 @@ class Game:
     min_words, 
     min_letters = 3,
     points_per_letter = 1,
-    extra_for_all_letters = 3
+    extra_for_all_letters = 3,
+    min_words_with_all_letters = 0
     ):
         self.consonants = consonants
         self.vowels = vowels
@@ -23,12 +24,14 @@ class Game:
         self.min_letters = min_letters
         self.points_per_letter = points_per_letter
         self.extra_for_all_letters = extra_for_all_letters
+        self.min_words_with_all_letters = min_words_with_all_letters
 
         self.super_letter = ''
         self.picked_letters = []
         self.words = []
         self.found_words = []
         self.points = 0
+        self.all_letters_word_count = 0
 
     def delete_game(self):
         self.super_letter = ''
@@ -36,11 +39,11 @@ class Game:
         self.words = []
         self.found_words = []
         self.points = 0
+        self.all_letters_word_count = 0
     
     def pick_letters(self):
         self.delete_game()
         leftovers = []
-
         leftovers[:] = self.letters[:]
         rand = random.randint(0, len(leftovers)-1)
         self.super_letter = leftovers[rand]
@@ -54,17 +57,14 @@ class Game:
     def gen(self):
         self.pick_letters()
         self.generate_wordlist()
-
-        while (len(self.words) < self.min_words):
+        while ((len(self.words) < self.min_words) or (self.all_letters_word_count < self.min_words_with_all_letters)):
             print("Regenerating...")
             self.pick_letters()
             self.generate_wordlist()
-        
-        print("Found %d words!" % (len(self.words)))
+        print("Found %d words (with %d all-letter words)!" % (len(self.words), self.all_letters_word_count))
 
     def generate_wordlist(self):
         self.words = []
-
         allowed_letters = []
         allowed_letters[:] = self.picked_letters[:]
         allowed_letters += self.super_letter
@@ -94,22 +94,20 @@ class Game:
                 continue
             broken = False
             super = False
-
             for char in line.lower():
-    
                 if (char in convert_letters.keys()):
                     char = convert_letters[char]
-
                 if (char not in allowed_letters):
                     broken = True
                     break
                 else:
                     if (char in self.super_letter):
                         super = True
-
             if ((not broken) and (super)):
-                self.words.append(line.strip())
-
+                word = line.strip()
+                self.words.append(word)
+                if (self.all_letters_check(word)):
+                    self.all_letters_word_count += 1
         list_file.close()
     
     def check_word(self, word):
@@ -117,12 +115,7 @@ class Game:
             if (word not in self.found_words):
                 self.found_words.append(word)
                 self.points += len(word)
-                bonus = True
-                for letter in (self.picked_letters):
-                    if (letter not in word):
-                        bonus = False
-                        break
-                if (bonus):
+                if (self.all_letters_check(word)):
                     self.points += self.extra_for_all_letters
                     print("%s bonus points!" %self.extra_for_all_letters)
                 print("%s is correct! +%d points! Total of %d points!" % (word, len(word), self.points))
@@ -142,6 +135,12 @@ class Game:
             else: 
                 print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
 
+    def all_letters_check(self, word):
+        for letter in (self.picked_letters):
+            if (letter not in word):
+                return False
+        return True
+
     def print_letters(self):
         print ("Letters: ", self.picked_letters)
         print ("Super: ", self.super_letter)
@@ -154,6 +153,7 @@ class Game:
 
     def print_score(self):
         print("You have a total of %d points!" % self.points)
+
 class Menu:
     def __init__(self):
         self.choices = {}
