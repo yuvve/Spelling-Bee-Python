@@ -4,6 +4,17 @@ import os
 
 class WrongAmountOfArguments(ValueError):
     pass
+class WordAlreadyFound(Exception):
+    pass
+class WordNotFound(Exception):
+    pass
+class WordTooShort(Exception):
+    pass
+class BadLetters(Exception):
+    def __init__(self, letters):
+        self.letters = letters
+class NoSuperLetter(Exception):
+    pass
 
 class Game:
     def __init__(self, 
@@ -110,6 +121,67 @@ class Game:
                 counter += 1
         return counter
 
+    def check_a_word(self, word, words, found_words):
+        if (word in words):
+            if (word not in found_words):
+                return True
+            else:
+                raise WordAlreadyFound
+        else:
+                raise WordNotFound
+    
+    #This function assumes that "word" is a correct answer
+    def count_points(self, word, picked_letters, super_letter, bonus_points):
+        points = (len(word))
+        bonus = 0
+        if (self.all_letters_check(word,picked_letters,super_letter)):
+            bonus = bonus_points
+        return (points, bonus)
+
+    def why_word_bad(self, word, min_letters, super_letter, picked_letters):
+        if (len(word) < min_letters):
+            raise WordTooShort
+        if (super_letter in word):
+            bad_letters = []
+            for char in ''.join(sorted(set(word), key=word.index)):
+                if (char != super_letter and (char not in picked_letters)):
+                    bad_letters.append(char)
+            if (len(bad_letters)>0):
+                raise BadLetters(bad_letters)
+            else:
+                raise WordNotFound
+        else: 
+            raise NoSuperLetter
+
+    #User interface functions
+
+    def check_word(self, word):
+        try:
+            if (self.check_a_word(word,self.words,self.found_words)):
+                points, bonus = self.count_points(word,self.picked_letters,self.super_letter,self.bonus_points)
+                if (bonus > 0):
+                    print ("%s is worth %d points +%d for using all letters!" %(word,points,bonus))
+                else:
+                    print ("%s is worth %d points!" %(word, points))
+                self.points += points + bonus
+                self.found_words.append(word)
+            else:
+                self.why_word_bad(word,self.min_letters,self.super_letter,self.picked_letters)
+        except WordAlreadyFound:
+            print("You have already found %s!" % word)
+        except WordNotFound:
+            try:
+                self.why_word_bad(word,self.min_letters,self.super_letter,self.picked_letters)
+            except NoSuperLetter:
+                print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
+            except WordTooShort:
+                print ("%s is too short!" % word)
+            except BadLetters as e:
+                for letter in e.letters:
+                    print ("%s contains the letter %s which is not in your picked letters!" %(word, letter))
+            except WordNotFound:
+                print ("%s not found!" % word)
+                
     def gen(self):
         self.delete_game()
         self.picked_letters = self.pick_letters(self.letters,7)
@@ -124,34 +196,6 @@ class Game:
         while ((len(self.words) < self.min_words) or (self.bonus_words < self.min_bonus_words)):
             print("Generating...")
             self.gen()
-        
-    def check_word(self, word):
-        if (word in self.words):
-            if (word not in self.found_words):
-                self.found_words.append(word)
-                self.points += len(word)
-                if (self.all_letters_check(word,self.picked_letters,self.super_letter)):
-                    self.points += self.bonus_points
-                    print("+%d bonus points!" %self.bonus_points)
-                print("%s is correct! +%d points! Total of %d points!" % (word, len(word), self.points))
-            else:
-                print("You have already found %s!" %(word))
-        else:
-                self.why_word_bad(word)
-
-    def why_word_bad(self, word):
-        if (len(word) < self.min_letters):
-            print ("%s is too short!" % word)
-        if (self.super_letter in word):
-            bad_letters = False
-            for char in ''.join(sorted(set(word), key=word.index)):
-                if (char != self.super_letter and (char not in self.picked_letters)):
-                    print ("%s contains the letter %s which is not in your picked letters!" %(word, char))
-                    bad_letters = True
-            if (not bad_letters):
-                print ("Word %s not found!" % word)
-        else: 
-            print ("%s does not include the super letter (%s)!" % (word, self.super_letter))
 
     def print_letters(self):
         print ("Letters: ", self.picked_letters)
