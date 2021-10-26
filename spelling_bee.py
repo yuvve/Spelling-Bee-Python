@@ -121,16 +121,16 @@ class Game:
         list_file.close()
         return words
 
-    def all_letters_check(self, word, picked_letters, super_letter):
-        for letter in picked_letters:
-            if letter != super_letter and letter not in word:
+    def all_letters_check(self, word, letters):
+        for letter in letters:
+            if letter not in word:
                 return False
         return True
 
-    def count_bonus_words(self, words, picked_letters, super_letter):
+    def count_bonus_words(self, words, letters):
         counter = 0
         for word in words:
-            if self.all_letters_check(word, picked_letters, super_letter):
+            if self.all_letters_check(word, letters):
                 counter += 1
         return counter
 
@@ -147,7 +147,7 @@ class Game:
     def count_points(self, word, picked_letters, super_letter, bonus_points):
         points = len(word)
         bonus = 0
-        if self.all_letters_check(word, picked_letters, super_letter):
+        if self.all_letters_check(word, picked_letters + [super_letter]):
             bonus = bonus_points
         return (points, bonus)
 
@@ -219,7 +219,7 @@ class Game:
             self.picked_letters, self.super_letter, self.file_name, self.min_letters
         )
         self.bonus_words = self.count_bonus_words(
-            self.words, self.picked_letters, self.super_letter
+            self.words, self.picked_letters + [self.super_letter]
         )
         self.print_letters()
         print(
