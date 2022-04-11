@@ -95,7 +95,7 @@ class Game:
 
         try:
             path = os.getcwd()
-            path += "\\"
+            path += "/"
             path += file_name
             list_file = open(path, "r", encoding="utf-8")
         except FileNotFoundError:
@@ -211,7 +211,6 @@ class Game:
                 print("%s not found!" % word)
 
     def gen(self):
-        self.delete_game()
         self.picked_letters = self.pick_letters(self.letters, 7)
         self.super_letter = self.pick_letters(self.picked_letters, 1)[0]
         self.picked_letters.remove(self.super_letter)
@@ -228,6 +227,7 @@ class Game:
         )
 
     def find_board(self):
+        self.delete_game()
         while (len(self.words) < self.min_words) or (
             self.bonus_words < self.min_bonus_words
         ):
@@ -343,7 +343,7 @@ def main():
     menu.add_choice("e", "Enter Word (i.e. 'e hello')", game.check_word, 1)
     menu.add_choice("f", "Show Found Words", lambda: print(game.found_words))
     menu.add_choice("c", "Show Words (cheating!)", lambda: print(game.words))
-    menu.add_choice("g", "Regenerate Letters", game.gen)
+    menu.add_choice("g", "Regenerate Letters", game.find_board)
     menu.add_choice("s", "Show Score", game.print_score)
     menu.add_choice("r", "Show Rules", game.print_rules)
     menu.run()
