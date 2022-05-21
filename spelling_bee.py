@@ -156,7 +156,7 @@ class Game:
             raise WordTooShort
         if super_letter in word:
             bad_letters = []
-            for char in "".join(sorted(set(word), key=word.index)):
+            for char in sorted(set(word)):
                 if char != super_letter and (char not in picked_letters):
                     bad_letters.append(char)
             if len(bad_letters) > 0:
@@ -273,6 +273,8 @@ class Menu:
 
     def take_input(self):
         choice = input(">> ").strip().split()
+        if len(choice)==0:
+            raise WrongAmountOfArguments
         key = choice[0]
         if len(choice) == 1:
             self.use_action(key)
